@@ -33,10 +33,10 @@ const run = () => {
         // const collection1 = client.db().collection()
         // const collection2 = client.db().collection()
         // const collection3 = client.db().collection()
-        app.get('/', async (req, res) => { })
-        app.post('/', async (req, res) => { })
-        app.delete('/', async (req, res) => { })
-        app.put('/', async (req, res) => { })
+        // app.get('/', async (req, res) => { })
+        // app.post('/', async (req, res) => { })
+        // app.delete('/', async (req, res) => { })
+        // app.put('/', async (req, res) => { })
     } finally { }
 }
 run()
