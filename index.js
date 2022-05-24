@@ -51,7 +51,9 @@ const run = () => {
             const email = req.body.email
             const result = await collection2.findOne({ email })
             if (result?.admin) {
-                res.send({ message: 'User is an admin' })
+                res.send({ message: true })
+            } else {
+                res.send({ message: false })
             }
         })
         app.get('/tools', async (req, res) => {
@@ -67,6 +69,33 @@ const run = () => {
             const order = req.body.order
             await collection3.insertOne(order)
             res.send({ message: 'hi' })
+        })
+        app.get('/allUsers', async (req, res) => {
+            const allUser = await collection2.find({}).toArray()
+            res.send(allUser)
+        })
+        app.post('/makeAdmin', async (req, res) => {
+            const email = req.body.email
+            await collection2.updateOne({ email }, {
+                $set: { admin: true }
+            }, {
+                upsert: true
+            })
+            res.send({ message: 'hi' })
+        })
+        app.get('/allOrders', async (req, res) => {
+            const allOrders = await collection3.find({}).toArray()
+            res.send(allOrders)
+        })
+        app.delete('/cancelOrder', async (req, res) => {
+            const id = req.body.orderId;
+            await collection3.deleteOne({ _id: ObjectId(id) })
+            res.send({ message: 'ordered canceled' })
+        })
+        app.get('/myOrders/:email', async (req, res) => {
+            const email = req.params.email
+            const myOrders = await collection3.find({ email }).toArray()
+            res.send(myOrders)
         })
     } finally { }
 }
