@@ -3,6 +3,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 const { MongoClient, ObjectId } = require('mongodb')
+const jwt = require('jsonwebtoken')
 require('dotenv').config()
 const stripe = require("stripe")('sk_test_51L1tk9Hl8mJ3Qhh0resZLZzbuekQXbGN1GLfLSSUnb44Xv2VVAIzqZfaC8lZ07geVW7jJZzRn3lgXQhlkXrvAkb900uRcgQCe6');
 
@@ -28,6 +29,21 @@ app.get('/', (req, res) => {
 //mongodb
 const uri = `mongodb+srv://${process.env.DBUSER}:${process.env.DBPASSWORD}@cluster0.1f3iy.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
 const client = new MongoClient(uri)
+//jwt verify
+const jwtVerify = (req, res, next) => {
+    const authHeader = req.headers.authorization
+    if (!authHeader) {
+        return
+    }
+    const token = authHeader.split(' ')[1]
+    jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded) => {
+        if (error) {
+            return
+        }
+        req.decoded = decoded
+    })
+    next()
+}
 const run = () => {
     try {
         client.connect()
@@ -38,6 +54,11 @@ const run = () => {
         // app.post('/', async (req, res) => { })
         // app.delete('/', async (req, res) => { })
         // app.put('/', async (req, res) => { })
+        app.post('/getToken', async (req, res) => {
+            const user = req.body.user
+            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: '1h' })
+            res.send({ accessToken: token })
+        })
         app.post('/create-payment-intent', async (req, res) => {
             const price = req.body.price
             if (!price) {
@@ -54,15 +75,18 @@ const run = () => {
         app.post('/addUser', async (req, res) => {
             const user = req.body.userCredential
             await collection2.insertOne(user)
-            res.send({ message: 'user added' })
+            res.send({ accessToken: token })
         })
         app.post('/addTools', async (req, res) => {
             const tools = req.body.tools
             await collection1.insertOne(tools)
             res.send({ message: 'tools added' })
         })
-        app.post('/checkAdmin', async (req, res) => {
+        app.post('/checkAdmin', jwtVerify, async (req, res) => {
             const email = req.body.email
+            if (req.decoded?.email != email) {
+                return
+            }
             const result = await collection2.findOne({ email })
             if (result?.admin) {
                 res.send({ message: true })
@@ -106,13 +130,19 @@ const run = () => {
             await collection3.deleteOne({ _id: ObjectId(id) })
             res.send({ message: 'ordered canceled' })
         })
-        app.get('/myOrders/:email', async (req, res) => {
+        app.get('/myOrders/:email', jwtVerify, async (req, res) => {
             const email = req.params.email
+            if (req.decoded?.email != email) {
+                return
+            }
             const myOrders = await collection3.find({ email }).toArray()
             res.send(myOrders)
         })
-        app.get('/userData/:email', async (req, res) => {
+        app.get('/userData/:email', jwtVerify, async (req, res) => {
             const email = req.params.email;
+            if (req.decoded?.email != email) {
+                return
+            }
             const userData = await collection2.findOne({ email })
             res.send(userData)
         })
