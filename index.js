@@ -52,10 +52,6 @@ const run = async () => {
         const collection1 = client.db('manufacture').collection('tools')
         const collection2 = client.db('manufacture').collection('users')
         const collection3 = client.db('manufacture').collection('orders')
-        // app.get('/', async (req, res) => { })
-        // app.post('/', async (req, res) => { })
-        // app.delete('/', async (req, res) => { })
-        // app.put('/', async (req, res) => { })
         app.post('/getToken', async (req, res) => {
             const user = req.body.user
             const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: '2d' })
@@ -110,6 +106,7 @@ const run = async () => {
         })
         app.post('/placeOrder', async (req, res) => {
             const order = req.body.order
+            order.status = 'To be Paid'
             const result = await collection3.insertOne(order)
             res.send({ orderID: result.insertedId })
         })
@@ -160,20 +157,18 @@ const run = async () => {
             const { orderID, transId } = req.body
             const order = await collection3.updateOne(
                 { _id: ObjectId(orderID) },
-                { $set: { paid: true } },
+                { $set: { paid: true, transactionID: transId, status: 'Paid' } },
                 { upsert: true }
             )
-
         })
         app.get('/ship/:orderID', async (req, res) => {
             const orderID = req.params.orderID
-            await collection3.updateOne({ _id: ObjectId(orderID) }, { $set: { shipped: true } }, { upsert: true })
+            await collection3.updateOne({ _id: ObjectId(orderID) }, { $set: { shipped: true, status: 'Shipped' } }, { upsert: true })
             res.send({ message: 'shipped' })
         })
-        app.post('/updateProfile', async (req, res) => {
+        app.post('/updateProfile', jwtVerify, async (req, res) => {
             const userCredential = req.body.userCredential
-            console.log(userCredential)
-            const order = await collection2.updateOne(
+            await collection2.updateOne(
                 { email: userCredential.email },
                 {
                     $set: {
@@ -185,6 +180,11 @@ const run = async () => {
                 { upsert: true }
             )
             res.send({ message: 'Profile updated' })
+        })
+        app.get('/deleteTool/:toolID', async (req, res) => {
+            const toolID = req.params.toolID
+            await collection1.deleteOne({ _id: ObjectId(toolID) })
+            res.send({ message: 'Tool Deleted' })
         })
     } finally { }
 }
