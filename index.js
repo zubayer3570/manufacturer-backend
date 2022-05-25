@@ -44,9 +44,9 @@ const jwtVerify = (req, res, next) => {
     })
     next()
 }
-const run = () => {
+const run = async () => {
     try {
-        client.connect()
+        await client.connect()
         const collection1 = client.db('manufacture').collection('tools')
         const collection2 = client.db('manufacture').collection('users')
         const collection3 = client.db('manufacture').collection('orders')
@@ -74,8 +74,11 @@ const run = () => {
         })
         app.post('/addUser', async (req, res) => {
             const user = req.body.userCredential
-            await collection2.insertOne(user)
-            res.send({ accessToken: token })
+            const userExists = await collection2.findOne({ email: user.email })
+            if (!userExists) {
+                await collection2.insertOne(user)
+            }
+            res.send({ message: 'User added' })
         })
         app.post('/addTools', async (req, res) => {
             const tools = req.body.tools
@@ -159,6 +162,11 @@ const run = () => {
                 { upsert: true }
             )
 
+        })
+        app.get('/ship/:orderID', async (req, res) => {
+            const orderID = req.params.orderID
+            await collection3.updateOne({ _id: ObjectId(orderID) }, { $set: { shipped: true } }, { upsert: true })
+            res.send({ message: 'shipped' })
         })
     } finally { }
 }
