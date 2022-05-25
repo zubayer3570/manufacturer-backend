@@ -33,11 +33,13 @@ const client = new MongoClient(uri)
 const jwtVerify = (req, res, next) => {
     const authHeader = req.headers.authorization
     if (!authHeader) {
+        console.log('no auth')
         return
     }
     const token = authHeader.split(' ')[1]
     jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded) => {
         if (error) {
+            console.log('verification error')
             return
         }
         req.decoded = decoded
@@ -56,7 +58,7 @@ const run = async () => {
         // app.put('/', async (req, res) => { })
         app.post('/getToken', async (req, res) => {
             const user = req.body.user
-            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: '1h' })
+            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: '2d' })
             res.send({ accessToken: token })
         })
         app.post('/create-payment-intent', async (req, res) => {
@@ -167,6 +169,22 @@ const run = async () => {
             const orderID = req.params.orderID
             await collection3.updateOne({ _id: ObjectId(orderID) }, { $set: { shipped: true } }, { upsert: true })
             res.send({ message: 'shipped' })
+        })
+        app.post('/updateProfile', async (req, res) => {
+            const userCredential = req.body.userCredential
+            console.log(userCredential)
+            const order = await collection2.updateOne(
+                { email: userCredential.email },
+                {
+                    $set: {
+                        name: userCredential.name,
+                        phone: userCredential.phone,
+                        address: userCredential.address
+                    }
+                },
+                { upsert: true }
+            )
+            res.send({ message: 'Profile updated' })
         })
     } finally { }
 }
