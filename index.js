@@ -52,6 +52,52 @@ const run = async () => {
         const collection1 = client.db('manufacture').collection('tools')
         const collection2 = client.db('manufacture').collection('users')
         const collection3 = client.db('manufacture').collection('orders')
+
+        //get calls
+        app.get('/tools', async (req, res) => {
+            const tools = await collection1.find({}).toArray()
+            res.send(tools)
+        })
+        app.get('/toolDetails/:id', async (req, res) => {
+            const { id } = req.params
+            const toolDetails = await collection1.findOne({ _id: ObjectId(id) })
+            res.send(toolDetails)
+        })
+        app.get('/allUsers', async (req, res) => {
+            const allUser = await collection2.find({}).toArray()
+            res.send(allUser)
+        })
+        app.get('/allOrders', async (req, res) => {
+            const allOrders = await collection3.find({}).toArray()
+            res.send(allOrders)
+        })
+        app.get('/myOrders/:email', jwtVerify, async (req, res) => {
+            const email = req.params.email
+            if (req.decoded?.email != email) {
+                return
+            }
+            const myOrders = await collection3.find({ email }).toArray()
+            res.send(myOrders)
+        })
+        app.get('/userData/:email', jwtVerify, async (req, res) => {
+            const email = req.params.email;
+            if (req.decoded?.email != email) {
+                return
+            }
+            const userData = await collection2.findOne({ email })
+            res.send(userData)
+        })
+        app.get('/getPayment/:orderID', async (req, res) => {
+            const orderID = req.params.orderID
+            const order = await collection3.findOne({ _id: ObjectId(orderID) })
+            res.send(order)
+        })
+        app.get('/ship/:orderID', async (req, res) => {
+            const orderID = req.params.orderID
+            await collection3.updateOne({ _id: ObjectId(orderID) }, { $set: { shipped: true, status: 'Shipped' } }, { upsert: true })
+            res.send({ message: 'shipped' })
+        })
+        //post calls
         app.post('/getToken', async (req, res) => {
             const user = req.body.user
             const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: '2d' })
@@ -95,25 +141,14 @@ const run = async () => {
                 res.send({ message: false })
             }
         })
-        app.get('/tools', async (req, res) => {
-            const tools = await collection1.find({}).toArray()
-            res.send(tools)
-        })
-        app.get('/toolDetails/:id', async (req, res) => {
-            const { id } = req.params
-            const toolDetails = await collection1.findOne({ _id: ObjectId(id) })
-            res.send(toolDetails)
-        })
+
         app.post('/placeOrder', async (req, res) => {
             const order = req.body.order
             order.status = 'To be Paid'
             const result = await collection3.insertOne(order)
             res.send({ orderID: result.insertedId })
         })
-        app.get('/allUsers', async (req, res) => {
-            const allUser = await collection2.find({}).toArray()
-            res.send(allUser)
-        })
+
         app.post('/makeAdmin', async (req, res) => {
             const email = req.body.email
             await collection2.updateOne({ email }, {
@@ -123,36 +158,6 @@ const run = async () => {
             })
             res.send({ message: 'hi' })
         })
-        app.get('/allOrders', async (req, res) => {
-            const allOrders = await collection3.find({}).toArray()
-            res.send(allOrders)
-        })
-        app.delete('/cancelOrder', async (req, res) => {
-            const id = req.body.orderId;
-            await collection3.deleteOne({ _id: ObjectId(id) })
-            res.send({ message: 'ordered canceled' })
-        })
-        app.get('/myOrders/:email', jwtVerify, async (req, res) => {
-            const email = req.params.email
-            if (req.decoded?.email != email) {
-                return
-            }
-            const myOrders = await collection3.find({ email }).toArray()
-            res.send(myOrders)
-        })
-        app.get('/userData/:email', jwtVerify, async (req, res) => {
-            const email = req.params.email;
-            if (req.decoded?.email != email) {
-                return
-            }
-            const userData = await collection2.findOne({ email })
-            res.send(userData)
-        })
-        app.get('/getPayment/:orderID', async (req, res) => {
-            const orderID = req.params.orderID
-            const order = await collection3.findOne({ _id: ObjectId(orderID) })
-            res.send(order)
-        })
         app.post('/updatePayment', async (req, res) => {
             const { orderID, transId } = req.body
             const order = await collection3.updateOne(
@@ -160,12 +165,9 @@ const run = async () => {
                 { $set: { paid: true, transactionID: transId, status: 'Paid' } },
                 { upsert: true }
             )
+            res.send({ message: 'Payment Completed' })
         })
-        app.get('/ship/:orderID', async (req, res) => {
-            const orderID = req.params.orderID
-            await collection3.updateOne({ _id: ObjectId(orderID) }, { $set: { shipped: true, status: 'Shipped' } }, { upsert: true })
-            res.send({ message: 'shipped' })
-        })
+
         app.post('/updateProfile', jwtVerify, async (req, res) => {
             const userCredential = req.body.userCredential
             await collection2.updateOne(
@@ -181,10 +183,16 @@ const run = async () => {
             )
             res.send({ message: 'Profile updated' })
         })
-        app.get('/deleteTool/:toolID', async (req, res) => {
+        //delete calls
+        app.delete('/deleteTool/:toolID', async (req, res) => {
             const toolID = req.params.toolID
             await collection1.deleteOne({ _id: ObjectId(toolID) })
             res.send({ message: 'Tool Deleted' })
+        })
+        app.delete('/cancelOrder', async (req, res) => {
+            const id = req.body.orderId;
+            await collection3.deleteOne({ _id: ObjectId(id) })
+            res.send({ message: 'ordered canceled' })
         })
     } finally { }
 }
