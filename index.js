@@ -52,6 +52,7 @@ const run = async () => {
         const collection1 = client.db('manufacture').collection('tools')
         const collection2 = client.db('manufacture').collection('users')
         const collection3 = client.db('manufacture').collection('orders')
+        const collection4 = client.db('manufacture').collection('review')
 
         //get calls
         app.get('/tools', async (req, res) => {
@@ -176,12 +177,18 @@ const run = async () => {
                     $set: {
                         name: userCredential.name,
                         phone: userCredential.phone,
-                        address: userCredential.address
+                        address: userCredential.address,
+                        education: userCredential.education
                     }
                 },
                 { upsert: true }
             )
             res.send({ message: 'Profile updated' })
+        })
+        app.post('/placeOrder', async (req, res) => {
+            const review = req.body.review;
+            await collection4.insertOne({ review })
+            res.send({ message: "Review Added" })
         })
         //delete calls
         app.delete('/deleteTool/:toolID', async (req, res) => {
