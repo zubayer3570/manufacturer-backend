@@ -64,6 +64,10 @@ const run = async () => {
             const toolDetails = await collection1.findOne({ _id: ObjectId(id) })
             res.send(toolDetails)
         })
+        app.get('/getReview', async (req, res) => {
+            const reviews = await collection4.find({}).toArray()
+            res.send(reviews)
+        })
         app.get('/allUsers', async (req, res) => {
             const allUser = await collection2.find({}).toArray()
             res.send(allUser)
@@ -185,9 +189,9 @@ const run = async () => {
             )
             res.send({ message: 'Profile updated' })
         })
-        app.post('/placeOrder', async (req, res) => {
+        app.post('/addReview', async (req, res) => {
             const review = req.body.review;
-            await collection4.insertOne({ review })
+            await collection4.insertOne(review)
             res.send({ message: "Review Added" })
         })
         //delete calls
